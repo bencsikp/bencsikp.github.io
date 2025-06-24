@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Report: Pediatric Diffuse Midline Glioma (H3 K27-altered, EGFR-altered)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Hope -->
+    <!-- Application Structure Plan: A tab-based, non-linear dashboard structure is used to make the dense medical information easily digestible. The user is not forced into a linear reading path but can immediately navigate to their area of interest (e.g., treatments, trials, research) via a persistent top navigation bar. This structure prioritizes user-driven exploration. Key interactions include filterable tables for trials and publications, and interactive charts that replace static data tables, enhancing data synthesis. This design is superior to the original report's linear format for web-based consumption, allowing quick access to specific, actionable information. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Molecular Alteration Frequencies (Table 1) -> Goal: Compare -> Viz: Interactive Bar Chart -> Interaction: Hover for details -> Justification: More visually engaging and quicker to parse than a table. -> Library: Chart.js.
+        - Report Info: Clinical Trials List (Appendix A) -> Goal: Organize/Filter -> Viz: Interactive Table -> Interaction: Live search/filter -> Justification: Allows users to find relevant trials quickly, a primary user task. -> Library/Method: Vanilla JS + HTML/Tailwind.
+        - Report Info: Publication List (Appendix B) -> Goal: Organize/Filter -> Viz: Interactive Card List -> Interaction: Live search/filter -> Justification: Makes a long list of research papers manageable and easy to explore. -> Library/Method: Vanilla JS + HTML/Tailwind.
+        - Report Info: H3K27M Mechanism -> Goal: Explain a process -> Viz: HTML/CSS Diagram -> Interaction: Static -> Justification: Visually simplifies a complex biological process without using forbidden SVG/Mermaid. -> Library/Method: HTML/Tailwind.
+        - Report Info: Treatment Types -> Goal: Organize -> Viz: Tabbed Interface -> Interaction: Click to switch views -> Justification: Prevents information overload by chunking related content. -> Library/Method: Vanilla JS + HTML/Tailwind.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F7F4;
+            color: #4A5568;
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #1E40AF;
+            border-bottom-color: #1E40AF;
+        }
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+        .tab-btn.active {
+            background-color: #1E40AF;
+            color: #FFFFFF;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px;
+            max-height: 50vh;
+        }
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+                max-height: 60vh;
+            }
+        }
+        .section-card {
+            background-color: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .search-input {
+            border: 1px solid #CBD5E1;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            width: 100%;
+            transition: border-color 0.3s ease;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: #1E40AF;
+            box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.2);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Header & Navigation -->
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-40 shadow-sm">
+        <div class="container mx-auto px-4">
+            <nav class="flex items-center justify-between h-20">
+                <div class="flex items-center space-x-3">
+                    <span class="text-2xl text-blue-800">🧬</span>
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-800">DMG Research Portal</h1>
+                </div>
+                <div class="hidden lg:flex items-center space-x-8 font-medium">
+                    <a href="#overview" class="nav-link">Overview</a>
+                    <a href="#biology" class="nav-link">The Science</a>
+                    <a href="#treatments" class="nav-link">Treatments</a>
+                    <a href="#trials" class="nav-link">Clinical Trials</a>
+                    <a href="#research" class="nav-link">Research Hub</a>
+                    <a href="#outlook" class="nav-link">Future Outlook</a>
+                </div>
+                <div class="lg:hidden">
+                    <select id="mobile-nav" class="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        <option value="#overview">Overview</option>
+                        <option value="#biology">The Science</option>
+                        <option value="#treatments">Treatments</option>
+                        <option value="#trials">Clinical Trials</option>
+                        <option value="#research">Research Hub</option>
+                        <option value="#outlook">Future Outlook</option>
+                    </select>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 md:py-12">
+        
+        <!-- Section: Overview -->
+        <section id="overview" class="mb-16 scroll-mt-24">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900">Pediatric H3 K27-altered, EGFR-altered Diffuse Midline Glioma</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-gray-600">This interactive portal synthesizes the latest research on a challenging pediatric brain tumor. It is designed to make the complex science, therapeutic landscape, and future directions accessible to clinicians, researchers, and families seeking to understand this disease.</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="section-card p-6">
+                    <h3 class="font-bold text-xl text-gray-800 mb-3">The Molecular Challenge</h3>
+                    <p class="text-gray-600">DMG is defined by an epigenetic catastrophe caused by an H3 K27 alteration. The specific subtype with an additional EGFR alteration presents a "double-hit" challenge, where the second mutation can drive resistance to promising new therapies.</p>
+                </div>
+                <div class="section-card p-6">
+                    <h3 class="font-bold text-xl text-gray-800 mb-3">Treatment Landscape</h3>
+                    <p class="text-gray-600">Standard radiation is only palliative. This portal explores the new frontier of targeted drugs, immunotherapies, and innovative delivery systems designed to overcome the tumor's defenses and the blood-brain barrier.</p>
+                </div>
+                <div class="section-card p-6">
+                    <h3 class="font-bold text-xl text-gray-800 mb-3">A Collaborative Effort</h3>
+                    <p class="text-gray-600">Progress is driven by a global network of researchers, clinicians, and patient advocates. Explore the key institutions, clinical trials, and experts leading the charge against this devastating disease.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section: The Science -->
+        <section id="biology" class="mb-16 scroll-mt-24">
+            <h2 class="text-3xl font-bold text-center mb-2 text-gray-900">The Science: An Epigenetic Catastrophe</h2>
+            <p class="text-center max-w-3xl mx-auto text-lg text-gray-600 mb-12">This section provides a simplified overview of the core biology that defines H3 K27-altered, EGFR-altered DMG. The disease is initiated by an epigenetic malfunction, which is then often compounded by other mutations that promote growth and resistance, creating a highly complex therapeutic challenge.</p>
+            
+            <div class="grid lg:grid-cols-2 gap-8 items-start">
+                <div class="section-card p-6">
+                    <h3 class="font-bold text-xl text-gray-800 mb-4">The H3 K27 Alteration Explained</h3>
+                    <div class="space-y-4">
+                        <div class="p-4 border rounded-lg">
+                            <p class="font-semibold text-green-700">In a Healthy Cell:</p>
+                            <p class="text-sm mt-1">The PRC2 enzyme adds a "silencing" mark (me3) to Histone H3 at position K27. This correctly turns off genes involved in proliferation, allowing cells to differentiate normally.</p>
+                            <div class="flex items-center justify-center space-x-2 text-sm mt-2 p-2 bg-green-50 rounded-md">
+                                <span>PRC2</span> <span class="text-2xl font-mono text-green-600">→</span> <span>H3K27</span> <span class="text-2xl font-mono text-green-600">→</span> <span class="font-bold text-green-800">H3K27me3</span> <span class="text-2xl font-mono text-green-600">→</span> <span>Genes OFF</span>
+                            </div>
+                        </div>
+                        <div class="p-4 border rounded-lg">
+                            <p class="font-semibold text-red-700">In a DMG Cell:</p>
+                            <p class="text-sm mt-1">The mutant H3K27M oncohistone binds to and disables the PRC2 enzyme. This causes a global loss of the "silencing" mark, leading to aberrant gene activation and uncontrolled cell proliferation.</p>
+                             <div class="flex items-center justify-center space-x-2 text-sm mt-2 p-2 bg-red-50 rounded-md">
+                                <span class="line-through">PRC2</span> <span class="text-2xl font-mono text-red-600">🚫</span> <span class="font-bold text-red-800">H3K27M</span> <span class="text-2xl font-mono text-red-600">→</span> <span>Loss of H3K27me3</span> <span class="text-2xl font-mono text-red-600">→</span> <span>Genes ON</span>
+                            </div>
+                        </div>
+                        <div class="p-4 border rounded-lg">
+                            <p class="font-semibold text-purple-700">The EGFR "Second Hit":</p>
+                            <p class="text-sm mt-1">An altered EGFR protein provides a powerful, parallel signal that promotes aggressive growth and, critically, can make the tumor resistant to promising drugs like ONC201. This creates the central therapeutic paradox for this subtype.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-card p-6">
+                    <h3 class="font-bold text-xl text-gray-800 mb-4 text-center">Key Molecular Alterations & Their Frequency</h3>
+                     <p class="text-center text-sm text-gray-500 mb-4">Hover over bars for therapeutic implications.</p>
+                    <div class="chart-container">
+                        <canvas id="mutationsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section: Treatments -->
+        <section id="treatments" class="mb-16 scroll-mt-24">
+            <h2 class="text-3xl font-bold text-center mb-2 text-gray-900">The Treatment Landscape</h2>
+            <p class="text-center max-w-3xl mx-auto text-lg text-gray-600 mb-8">The failure of conventional therapy has spurred a global effort to develop novel treatments. This section outlines the main strategies being pursued, from standard care to the cutting-edge of targeted drugs, immunotherapy, and advanced delivery systems. Navigate the tabs below to explore each approach.</p>
+
+            <div id="treatments-tabs">
+                <div class="flex flex-wrap justify-center gap-2 mb-8">
+                    <button class="tab-btn px-4 py-2 rounded-md font-medium bg-white border border-gray-300 active" data-tab="targeted">Targeted Therapies</button>
+                    <button class="tab-btn px-4 py-2 rounded-md font-medium bg-white border border-gray-300" data-tab="immuno">Immunotherapies</button>
+                    <button class="tab-btn px-4 py-2 rounded-md font-medium bg-white border border-gray-300" data-tab="delivery">Delivery Innovations</button>
+                    <button class="tab-btn px-4 py-2 rounded-md font-medium bg-white border border-gray-300" data-tab="standard">Standard of Care</button>
+                </div>
+
+                <div class="tab-content" id="tab-targeted">
+                    <div class="section-card p-6 md:p-8">
+                        <h3 class="font-bold text-2xl text-gray-800 mb-4">Targeted Therapies: Hitting a Moving Target</h3>
+                        <p class="mb-6 text-gray-600">Targeted therapies are drugs designed to interfere with specific molecules involved in cancer growth. For DMG, this means attacking the core epigenetic problem or the specific signaling pathways that fuel the tumor. The presence of an EGFR alteration is a key consideration, as it can be both a target and a resistance mechanism.</p>
+                        
+                        <div class="p-4 rounded-lg bg-amber-50 border border-amber-200 mb-6">
+                            <h4 class="font-bold text-lg text-amber-800">The ONC201 / EGFR Paradox</h4>
+                            <p class="text-amber-700 mt-2">ONC201 (dordaviprone) is the most promising single drug to show durable responses in H3K27M-mutant DMG. However, a hyperactive EGFR pathway is a primary mechanism of <span class="font-bold">resistance</span> to ONC201. This means patients with the EGFR-altered subtype are unlikely to benefit from ONC201 alone, making combination therapies with EGFR inhibitors essential.</p>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-lg text-gray-700">Epigenetic Modifiers</h4>
+                                <p class="text-sm text-gray-600">These drugs aim to reverse the H3K27M effect. <span class="font-semibold">HDAC Inhibitors</span> (e.g., Panobinostat) try to restore a more normal gene expression pattern. <span class="font-semibold">EZH2 Inhibitors</span> target the tumor's dependency on the residual PRC2 enzyme complex.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-lg text-gray-700">EGFR Inhibitors</h4>
+                                <p class="text-sm text-gray-600">A logical approach for the EGFR-altered subtype. Next-generation <span class="font-semibold">Tyrosine Kinase Inhibitors (TKIs)</span> like Osimertinib, which have better blood-brain barrier penetration, are the most promising candidates to directly block this growth pathway.</p>
+                            </div>
+                             <div>
+                                <h4 class="font-semibold text-lg text-gray-700">Other Pathway Inhibitors</h4>
+                                <p class="text-sm text-gray-600"><span class="font-semibold">CDK4/6 Inhibitors</span> (e.g., Abemaciclib) aim to re-engage the cell's natural division brakes. <span class="font-semibold">PI3K/MAPK inhibitors</span> block other critical growth signals downstream of receptor kinases.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content hidden" id="tab-immuno">
+                    <div class="section-card p-6 md:p-8">
+                        <h3 class="font-bold text-2xl text-gray-800 mb-4">Immunotherapies: Unleashing the Immune System</h3>
+                        <p class="mb-6 text-gray-600">Immunotherapy uses the body's own immune system to fight cancer. This is a powerful alternative to targeted drugs because its effectiveness is independent of intracellular resistance mechanisms like those driven by EGFR, offering a parallel line of attack.</p>
+                         <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-lg text-gray-700">CAR T-cell Therapy</h4>
+                                <p class="text-sm text-gray-600">A patient's T-cells are engineered in a lab to recognize specific proteins on the tumor surface. Key targets for DMG include <span class="font-semibold">GD2</span> and <span class="font-semibold">B7-H3</span>. These "living drugs" are then infused back into the patient.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-lg text-gray-700">Therapeutic Vaccines</h4>
+                                <p class="text-sm text-gray-600">Vaccines aim to train the patient's existing immune cells to recognize the tumor. The <span class="font-semibold">H3K27M mutation</span> itself creates a perfect, tumor-exclusive target (a neoantigen) for vaccine development.</p>
+                            </div>
+                             <div>
+                                <h4 class="font-semibold text-lg text-gray-700">Oncolytic Virotherapy</h4>
+                                <p class="text-sm text-gray-600">This approach uses viruses engineered to selectively infect and kill cancer cells. This not only destroys the tumor directly but also releases danger signals that attract a wider immune response.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content hidden" id="tab-delivery">
+                     <div class="section-card p-6 md:p-8">
+                        <h3 class="font-bold text-2xl text-gray-800 mb-4">Delivery Innovations: Breaching the Fortress</h3>
+                        <p class="mb-6 text-gray-600">Even the best drug is useless if it can't reach the tumor. The blood-brain barrier (BBB) is a major obstacle in treating DMG. These innovative techniques are designed to bypass or temporarily open this protective barrier.</p>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="border p-4 rounded-lg">
+                                <h4 class="font-semibold text-lg text-gray-700">Convection-Enhanced Delivery (CED)</h4>
+                                <p class="text-sm text-gray-600 mt-2">A neurosurgical technique where micro-catheters are placed directly into the tumor to infuse drugs under pressure. This <span class="font-semibold">bypasses the BBB entirely</span>, achieving thousands of times higher local drug concentration with minimal systemic side effects.</p>
+                            </div>
+                            <div class="border p-4 rounded-lg">
+                                <h4 class="font-semibold text-lg text-gray-700">Focused Ultrasound (FUS)</h4>
+                                <p class="text-sm text-gray-600 mt-2">A non-invasive technique that uses focused sound waves to oscillate injected microbubbles, <span class="font-semibold">temporarily and safely opening the BBB</span> in a targeted area. This allows systemically administered drugs to enter the tumor for a few hours.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content hidden" id="tab-standard">
+                    <div class="section-card p-6 md:p-8">
+                        <h3 class="font-bold text-2xl text-gray-800 mb-4">Standard of Care: A Foundation of Failure</h3>
+                        <p class="mb-6 text-gray-600">For decades, the standard of care for DMG has been profoundly limited, offering only temporary benefits. Understanding these limitations is key to appreciating why novel, biology-driven approaches are so desperately needed.</p>
+                         <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-lg text-gray-700">Focal Radiation Therapy</h4>
+                                <p class="text-sm text-gray-600">The only standard treatment that provides a consistent, though modest, benefit. Radiation is <span class="font-semibold">purely palliative</span>, not curative. It temporarily shrinks the tumor, relieves neurological symptoms, and extends median survival from a few months to ~9-12 months. However, progression is inevitable.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-lg text-red-700">Why Conventional Therapies Fail</h4>
+                                <ul class="list-disc list-inside text-sm text-gray-600 space-y-1 mt-2">
+                                    <li><span class="font-semibold">Surgery is Impossible:</span> The tumor cells are diffusely infiltrated into vital brain structures like the pons, making surgical removal impossible without catastrophic neurological damage.</li>
+                                    <li><span class="font-semibold">Chemotherapy is Ineffective:</span> Decades of trials have failed. Most chemo drugs cannot cross the intact blood-brain barrier to reach the tumor in effective concentrations.</li>
+                                    <li><span class="font-semibold">Intrinsic Resistance:</span> DMG cells are inherently resistant to traditional DNA-damaging agents due to their unique epigenetic state and co-occurring mutations (e.g., in TP53).</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section: Clinical Trials -->
+        <section id="trials" class="mb-16 scroll-mt-24">
+            <h2 class="text-3xl font-bold text-center mb-2 text-gray-900">Active & Recruiting Clinical Trials</h2>
+            <p class="text-center max-w-3xl mx-auto text-lg text-gray-600 mb-8">Clinical trials are the engine of progress. This section provides a filterable list of ongoing and recent trials for pediatric DMG, offering a snapshot of the most promising therapies currently under investigation worldwide. This is not exhaustive but represents key studies from the source report.</p>
+
+            <div class="section-card p-4 md:p-6">
+                 <input type="text" id="trials-search" class="search-input mb-4" placeholder="Search trials by name, therapy type, phase...">
+                 <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3">Identifier</th>
+                                <th scope="col" class="px-6 py-3">Title / Therapy Type</th>
+                                <th scope="col" class="px-6 py-3">Phase</th>
+                                <th scope="col" class="px-6 py-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trials-tbody">
+                            <!-- JS will populate this -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section: Research Hub -->
+        <section id="research" class="mb-16 scroll-mt-24">
+            <h2 class="text-3xl font-bold text-center mb-2 text-gray-900">Research Hub</h2>
+            <p class="text-center max-w-3xl mx-auto text-lg text-gray-600 mb-8">This hub connects you with the science and people driving progress. Explore the latest high-impact publications and discover the key research centers and experts in the DMG field.</p>
+            
+            <div id="research-tabs">
+                <div class="flex flex-wrap justify-center gap-2 mb-8">
+                    <button class="tab-btn px-4 py-2 rounded-md font-medium bg-white border border-gray-300 active" data-tab="publications">Key Publications</button>
+                    <button class="tab-btn px-4 py-2 rounded-md font-medium bg-white border border-gray-300" data-tab="experts">Experts & Centers</button>
+                </div>
+
+                <div class="tab-content" id="tab-publications">
+                    <div class="section-card p-4 md:p-6">
+                        <input type="text" id="pubs-search" class="search-input mb-4" placeholder="Search publications by title, author, journal...">
+                        <div id="pubs-list" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <!-- JS will populate this -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-content hidden" id="tab-experts">
+                    <div class="section-card p-6 md:p-8">
+                        <h3 class="font-bold text-2xl text-gray-800 mb-4">Key Research Centers & Consortia</h3>
+                        <p class="mb-6 text-gray-600">Progress against this rare disease depends on collaboration. These institutions and networks pool resources and patients to accelerate research and conduct meaningful clinical trials.</p>
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-center">
+                            <div class="p-3 bg-gray-100 rounded-lg"><p class="font-semibold">St. Jude</p></div>
+                            <div class="p-3 bg-gray-100 rounded-lg"><p class="font-semibold">PNOC</p></div>
+                            <div class="p-3 bg-gray-100 rounded-lg"><p class="font-semibold">PBTC</p></div>
+                            <div class="p-3 bg-gray-100 rounded-lg"><p class="font-semibold">COG</p></div>
+                            <div class="p-3 bg-gray-100 rounded-lg"><p class="font-semibold">Mayo Clinic</p></div>
+                            <div class="p-3 bg-gray-100 rounded-lg"><p class="font-semibold">DKFZ (Germany)</p></div>
+                            <div class="p-3 bg-gray-100 rounded-lg"><p class="font-semibold">Univ. of Vienna</p></div>
+                             <div class="p-3 bg-gray-100 rounded-lg"><p class="font-semibold">Australian Centers</p></div>
+                        </div>
+
+                        <h3 class="font-bold text-2xl text-gray-800 mt-8 mb-4">Leading Experts</h3>
+                        <p class="mb-6 text-gray-600">The following is a non-exhaustive list of researchers and clinicians who have made significant contributions to the field through key publications and clinical trial leadership.</p>
+                        <ul class="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-gray-700">
+                           <li><span class="font-semibold">Mariella G. Filbin</span> (Dana-Farber)</li>
+                           <li><span class="font-semibold">David J. Daniels</span> (Mayo Clinic)</li>
+                           <li><span class="font-semibold">Sunjong Ji</span> (Univ. of Michigan)</li>
+                           <li><span class="font-semibold">David Ziegler</span> (Sydney Children's)</li>
+                           <li><span class="font-semibold">Johannes Gojo</span> (MedUni Vienna)</li>
+                           <li><span class="font-semibold">Stefano G. Vallero</span> (Univ. of Turin)</li>
+                           <li><span class="font-semibold">Marta C. Hernandez</span> (Hosp. Malaga)</li>
+                           <li><span class="font-semibold">Karol Wiśniewski</span> (Royal Melbourne)</li>
+                           <li><span class="font-semibold">Manuela Mandorino</span> (Univ. of Bari)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+         <!-- Section: Outlook -->
+        <section id="outlook" class="mb-16 scroll-mt-24">
+            <h2 class="text-3xl font-bold text-center mb-2 text-gray-900">Strategic Outlook & Future Directions</h2>
+             <p class="text-center max-w-3xl mx-auto text-lg text-gray-600 mb-8">The path forward requires a multi-faceted approach, moving away from "one-size-fits-all" treatment. The future lies in personalized, combination therapies guided by deep molecular analysis of each individual tumor.</p>
+            <div class="grid md:grid-cols-2 gap-8">
+                 <div class="section-card p-6">
+                    <h3 class="font-bold text-xl text-gray-800 mb-3">Promising Strategies for EGFR-altered DMG</h3>
+                    <p class="text-gray-600 mb-3">Monotherapy is unlikely to succeed. The most promising avenues involve simultaneous attacks on the tumor's core vulnerabilities:</p>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li><span class="font-semibold">Targeted Combination Attack:</span> Using a potent, BBB-penetrant <span class="font-bold">EGFR inhibitor</span> as the backbone, combined with an <span class="font-bold">epigenetic modifier</span> (like an HDAC inhibitor) and/or a <span class="font-bold">cell cycle inhibitor</span>.</li>
+                        <li><span class="font-semibold">Immunotherapy-based Attack:</span> Deploying powerful approaches like <span class="font-bold">CAR T-cell therapy</span> (targeting GD2 or B7-H3) that are unaffected by the intracellular EGFR resistance pathway.</li>
+                    </ul>
+                </div>
+                 <div class="section-card p-6">
+                    <h3 class="font-bold text-xl text-gray-800 mb-3">The Imperative of Personalization</h3>
+                     <p class="text-gray-600 mb-3">The most critical takeaway is that comprehensive, upfront molecular profiling is essential. The identification of an EGFR alteration is a decision-altering data point that should guide therapy away from certain drugs (like ONC201 monotherapy) and toward others.</p>
+                     <p class="text-gray-600 font-medium">Matching the right patient to the right combination of drugs at the right time is the only path toward improving outcomes.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-gray-800 text-white mt-16">
+        <div class="container mx-auto px-4 py-6 text-center">
+            <p class="text-sm">This interactive report is a synthesis of the source research document and is for informational purposes only. It is not medical advice.</p>
+            <p class="text-xs text-gray-400 mt-2">Generated based on the research report "State of the Art and Therapeutic Landscape for Pediatric H3 K27-altered, EGFR-altered Diffuse Midline Glioma".</p>
+        </div>
+    </footer>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            // --- DATA ---
+            const mutationsData = {
+                labels: ['H3.3K27M (H3F3A)', 'TP53 mutation', 'PDGFRA amp.', 'H3.1K27M (HIST1H3B/C)', 'ACVR1 mutation', 'EGFR alteration'],
+                frequencies: [70, 70, 30, 20, 20, 8.5],
+                implications: [
+                    'Defines the disease; target for epigenetic therapies, immunotherapy. Poorer prognosis.',
+                    'Poorer prognosis, associated with radioresistance. Potential target for p53 pathway modulators.',
+                    'Drives cell proliferation. Potential sensitivity to PDGFRA inhibitors.',
+                    'Defines the disease; relatively better prognosis. Often with ACVR1 mutation.',
+                    'Prognostic impact under investigation. Potential sensitivity to ACVR1 inhibitors.',
+                    'Can be a primary driver. Confers resistance to ONC201. Potential sensitivity to next-gen TKIs.'
+                ]
+            };
+
+            const clinicalTrialsData = [
+                { id: 'NCT05580562', title: 'ONC201 vs. Placebo (ACTION Study)', type: 'Small Molecule', phase: 3, status: 'Recruiting' },
+                { id: 'NCT05768880', title: 'Quad CAR T-cell Immunotherapy', type: 'CAR T-cell', phase: 1, status: 'Recruiting' },
+                { id: 'NCT04185038', title: 'B7-H3-Specific CAR T-cell', type: 'CAR T-cell', phase: 1, status: 'Recruiting' },
+                { id: 'NCT04196413', title: 'GD2 CAR T cells', type: 'CAR T-cell', phase: 1, status: 'Recruiting' },
+                { id: 'NCT04808245', title: 'H3K27M Peptide Vaccine (INTERCEPT-H3)', type: 'Vaccine', phase: 1, status: 'Recruiting' },
+                { id: 'NCT02960230', title: 'H3.3K27M Peptide Vaccine + Nivolumab', type: 'Vaccine', phase: '1/2', status: 'Active, not recruiting' },
+                { id: 'NCT05009992', title: 'ONC201 + Paxalisib + RT (PNOC022)', type: 'Small Molecule', phase: 2, status: 'Recruiting' },
+                { id: 'NCT06894979', title: 'AZD1390 (ATM inhibitor) + RT', type: 'Small Molecule', phase: 1, status: 'Not yet recruiting' },
+                { id: 'NCT04264143', title: 'CED of MTX110 (Panobinostat)', type: 'Delivery', phase: 1, status: 'Recruiting' },
+                { id: 'NCT04804709', title: 'FUS with Oral Panobinostat', type: 'Delivery', phase: 1, status: 'Active, not recruiting' },
+                { id: 'NCT05123534', title: 'Sonodynamic Therapy (FUS + SONALA-001)', type: 'Delivery', phase: '1/2', status: 'Recruiting' },
+                { id: 'NCT04341311', title: 'Marizomib + Panobinostat', type: 'Small Molecule', phase: 1, status: 'Active, not recruiting' }
+            ];
+
+            const publicationsData = [
+                { year: 2024, title: 'Extracellular Histones Profiles of Pediatric H3K27-Altered Diffuse Midline Glioma.', authors: 'Al-Dhafer, M., et al.', journal: 'Molecular Diagnosis & Therapy', doi: '10.1007/s40291-024-00754-6', link: 'https://pubmed.ncbi.nlm.nih.gov/39514166/' },
+                { year: 2024, title: 'Pediatric Diffuse Midline Glioma H3K27-Altered: From Developmental Origins to Therapeutic Challenges.', authors: 'Mandorino, M., et al.', journal: 'Cancers (Basel)', doi: '10.3390/cancers16101814', link: 'https://pubmed.ncbi.nlm.nih.gov/38791893/' },
+                { year: 2024, title: 'New progress in the treatment of diffuse midline glioma with H3K27M alteration.', authors: 'Yang, Z., et al.', journal: 'Heliyon', doi: '10.1016/j.heliyon.2024.e24877', link: 'https://pubmed.ncbi.nlm.nih.gov/38312649/' },
+                { year: 2023, title: 'The pontine diffuse midline glioma, EGFR-subtype with ependymal features...', authors: 'Beccaria, K., et al.', journal: 'Brain Pathology', doi: '10.1111/bpa.13181', link: 'https://pubmed.ncbi.nlm.nih.gov/37331375/' },
+                { year: 2023, title: 'Efficacy of ONC201 in H3 K27M–Mutant Diffuse Midline Glioma: An Integrated Analysis...', authors: 'Arrillaga-Romany, I., et al.', journal: 'Journal of Clinical Oncology', doi: '10.1200/JCO.23.01134', link: 'https://ascopubs.org/doi/10.1200/JCO.23.01134' },
+                { year: 2023, title: 'Pediatric diffuse midline glioma: Understanding the mechanisms and assessing the next generation...', authors: 'Still, M. E., et al.', journal: 'Neuro-Oncology Advances', doi: '10.1093/noajnl/vdad040', link: 'https://pubmed.ncbi.nlm.nih.gov/37152806/' },
+                { year: 2024, title: 'A roadmap for H3K27-altered diffuse midline glioma.', authors: 'Nazarian, J., et al.', journal: 'Nature Medicine', doi: '10.1038/s41591-024-02889-y', link: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11067690/'},
+                { year: 2022, title: 'Elucidating the Mechanism of EGFR Mediated Resistance to ONC201...', authors: 'Ji, S.', journal: 'ChadTough Foundation Grant', doi: 'N/A', link: 'https://chadtough.org/grants/elucidating-the-mechanism-of-egfr-mediated-resistance-to-onc201-in-h3k27m-mutant-diffuse-midline-glioma/' },
+                { year: 2022, title: 'GD2-CAR T cell therapy for H3K27M-mutated diffuse midline gliomas.', authors: 'Majzner, R. G., et al.', journal: 'Nature', doi: '10.1038/s41586-022-04436-5', link: 'https://www.nature.com/articles/s41586-022-04436-5' },
+            ];
+
+            // --- CHART ---
+            const ctx = document.getElementById('mutationsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: mutationsData.labels,
+                    datasets: [{
+                        label: 'Approximate Frequency (%)',
+                        data: mutationsData.frequencies,
+                        backgroundColor: 'rgba(30, 64, 175, 0.7)',
+                        borderColor: 'rgba(30, 64, 175, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 80,
+                            title: {
+                                display: true,
+                                text: 'Frequency in DMG (%)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed.x !== null) label += context.parsed.x + '%';
+                                    return label;
+                                },
+                                afterLabel: function(context) {
+                                    const implication = mutationsData.implications[context.dataIndex];
+                                    const words = implication.split(' ');
+                                    let lines = [];
+                                    let currentLine = '';
+                                    words.forEach(word => {
+                                        if ((currentLine + word).length > 40) {
+                                            lines.push(currentLine.trim());
+                                            currentLine = '';
+                                        }
+                                        currentLine += word + ' ';
+                                    });
+                                    lines.push(currentLine.trim());
+                                    return lines;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // --- TABS ---
+            function setupTabs(containerId) {
+                const container = document.getElementById(containerId);
+                const tabButtons = container.querySelectorAll('.tab-btn');
+                const tabContents = container.querySelectorAll('.tab-content');
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const tabId = button.dataset.tab;
+                        tabButtons.forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        tabContents.forEach(content => {
+                            content.classList.toggle('hidden', content.id !== `tab-${tabId}`);
+                        });
+                    });
+                });
+            }
+            setupTabs('treatments-tabs');
+            setupTabs('research-tabs');
+
+            // --- FILTERABLE LISTS ---
+            const trialsTbody = document.getElementById('trials-tbody');
+            const trialsSearch = document.getElementById('trials-search');
+            function renderTrials(filter = '') {
+                const searchTerm = filter.toLowerCase();
+                const filtered = clinicalTrialsData.filter(trial => 
+                    Object.values(trial).some(val => val.toString().toLowerCase().includes(searchTerm))
+                );
+                trialsTbody.innerHTML = filtered.length ? filtered.map(trial => `
+                    <tr class="bg-white border-b hover:bg-gray-50">
+                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${trial.id}</td>
+                        <td class="px-6 py-4">
+                            ${trial.title}
+                            <span class="block text-xs text-blue-700 font-semibold">${trial.type}</span>
+                        </td>
+                        <td class="px-6 py-4">${trial.phase}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 text-xs font-medium rounded-full ${trial.status === 'Recruiting' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                                ${trial.status}
+                            </span>
+                        </td>
+                    </tr>`).join('') : `<tr><td colspan="4" class="text-center py-4 text-gray-500">No trials found.</td></tr>`;
+            }
+            renderTrials();
+            trialsSearch.addEventListener('input', (e) => renderTrials(e.target.value));
+
+            const pubsList = document.getElementById('pubs-list');
+            const pubsSearch = document.getElementById('pubs-search');
+            function renderPublications(filter = '') {
+                const searchTerm = filter.toLowerCase();
+                const filtered = publicationsData.filter(pub => 
+                    Object.values(pub).some(val => val.toString().toLowerCase().includes(searchTerm))
+                );
+                pubsList.innerHTML = filtered.length ? filtered.map(pub => `
+                    <div class="border p-4 rounded-lg bg-white h-full flex flex-col">
+                        <p class="text-xs text-gray-500">${pub.journal} (${pub.year})</p>
+                        <p class="font-semibold text-gray-800 my-1 flex-grow">${pub.title}</p>
+                        <p class="text-sm text-gray-600 mb-2">By ${pub.authors}</p>
+                        <a href="${pub.link}" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-blue-600 hover:underline mt-auto">
+                            View Article (DOI: ${pub.doi}) &rarr;
+                        </a>
+                    </div>`).join('') : `<p class="col-span-full text-center py-4 text-gray-500">No publications found.</p>`;
+            }
+            renderPublications();
+            pubsSearch.addEventListener('input', (e) => renderPublications(e.target.value));
+
+            // --- NAVIGATION ---
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('section');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const activeId = entry.target.id;
+                        navLinks.forEach(link => {
+                            link.classList.toggle('active', link.getAttribute('href') === `#${activeId}`);
+                        });
+                        const mobileNavSelect = document.getElementById('mobile-nav');
+                        mobileNavSelect.value = `#${activeId}`;
+                    }
+                });
+            }, { rootMargin: '-50% 0px -50% 0px' });
+            sections.forEach(section => observer.observe(section));
+            
+            const mobileNav = document.getElementById('mobile-nav');
+            mobileNav.addEventListener('change', () => {
+                window.location.hash = mobileNav.value;
+            });
+
+        });
+    </script>
+</body>
+</html>
+
